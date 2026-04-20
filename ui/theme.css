@@ -1,0 +1,449 @@
+/* ══════════════════════════════════════════════════════
+   PROJECT ORCA — Edgarian / Ratatui Theme
+   No border-radius anywhere. Monospace. Dense. Terminal.
+   ══════════════════════════════════════════════════════ */
+
+/* ── Global reset ──────────────────────────────────── */
+* {
+    scrollbar-size: 1;
+}
+
+Screen {
+    background: #0a0a0a;
+    color: #ffffff;
+    layers: base overlay;
+}
+
+/* ── App layout ────────────────────────────────────── */
+#topbar {
+    height: 3;
+    background: #0f0f0f;
+    border-bottom: solid #222222;
+    layout: horizontal;
+    align: left middle;
+    padding: 0 1;
+}
+
+#topbar-left {
+    layout: horizontal;
+    align: left middle;
+    width: auto;
+}
+
+#search-input {
+    width: 20;
+    background: #161616;
+    border: tall #333333;
+    color: #ffffff;
+    margin: 0 1;
+}
+
+#search-input:focus {
+    border: tall #ffffff;
+}
+
+#load-btn {
+    background: #ffffff;
+    color: #000000;
+    border: none;
+    min-width: 6;
+    height: 1;
+}
+
+#load-btn:hover {
+    background: #cccccc;
+}
+
+#index-ticker {
+    content-align: center middle;
+    color: #555555;
+    width: 1fr;
+    overflow: hidden;
+}
+
+#topbar-right {
+    layout: horizontal;
+    align: right middle;
+    width: auto;
+}
+
+#theme-toggle {
+    background: #0f0f0f;
+    border: solid #333333;
+    color: #888888;
+    min-width: 3;
+    height: 1;
+}
+
+#theme-toggle:hover {
+    color: #ffffff;
+    border: solid #ffffff;
+}
+
+#datetime-label {
+    color: #555555;
+    margin-left: 1;
+}
+
+/* ── Main body ─────────────────────────────────────── */
+#body {
+    layout: horizontal;
+    height: 1fr;
+}
+
+/* ── Sidebar ───────────────────────────────────────── */
+#sidebar {
+    width: 6;
+    background: #0f0f0f;
+    border-right: solid #222222;
+    layout: vertical;
+    align: center top;
+    padding: 0;
+}
+
+#logo {
+    width: 6;
+    height: 2;
+    content-align: center middle;
+    padding: 0;
+    margin-bottom: 1;
+}
+
+.sidebar-btn {
+    width: 6;
+    height: 3;
+    background: #0f0f0f;
+    border: none;
+    color: #555555;
+    content-align: center middle;
+}
+
+.sidebar-btn:hover {
+    color: #cccccc;
+    background: #161616;
+}
+
+.sidebar-btn.active {
+    color: #ffffff;
+    border-left: tall #ffffff;
+    background: #161616;
+}
+
+/* ── Panel grid ────────────────────────────────────── */
+#panel-grid {
+    layout: grid;
+    grid-size: 2 1;
+    grid-gutter: 0;
+    width: 1fr;
+    height: 1fr;
+}
+
+/* ── Panels ────────────────────────────────────────── */
+.panel {
+    border: solid #2a2a2a;
+    background: #0f0f0f;
+}
+
+.panel-header {
+    height: 3;
+    background: #161616;
+    border-bottom: solid #2a2a2a;
+    layout: horizontal;
+    align: left middle;
+    padding: 0 1;
+}
+
+.panel-type-label {
+    color: #666666;
+}
+
+.panel-title {
+    color: #ffffff;
+    margin-left: 1;
+}
+
+.panel-body {
+    padding: 1;
+    overflow-y: auto;
+}
+
+/* ── Signal flags ──────────────────────────────────── */
+.flag-green {
+    border-left: tall #44ff88;
+    background: #091409;
+    color: #66ffaa;
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
+.flag-red {
+    border-left: tall #ff4444;
+    background: #200a0a;
+    color: #ff6666;
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
+.flag-blue {
+    border-left: tall #4499ff;
+    background: #080f20;
+    color: #66bbff;
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
+.flag-amber {
+    border-left: tall #ffaa00;
+    background: #1a1200;
+    color: #ffcc44;
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
+.flag-purple {
+    border-left: tall #cc88ff;
+    background: #150a20;
+    color: #dd99ff;
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
+/* ── ORCA score block ──────────────────────────────── */
+.orca-score-block {
+    border: solid #2a2a2a;
+    background: #0f0f0f;
+    padding: 1;
+    margin-top: 1;
+    color: #888888;
+}
+
+.orca-score-value {
+    color: #44ff88;
+}
+
+/* ── Tables ────────────────────────────────────────── */
+DataTable {
+    background: #0f0f0f;
+    border: solid #2a2a2a;
+    height: 1fr;
+}
+
+DataTable > .datatable--header {
+    background: #161616;
+    color: #888888;
+}
+
+DataTable > .datatable--cursor {
+    background: #222222;
+}
+
+DataTable > .datatable--odd-row {
+    background: #0f0f0f;
+}
+
+DataTable > .datatable--even-row {
+    background: #141414;
+}
+
+/* ── Inputs ────────────────────────────────────────── */
+Input {
+    background: #161616;
+    border: tall #333333;
+    color: #ffffff;
+}
+
+Input:focus {
+    border: tall #ffffff;
+}
+
+/* ── Buttons (generic) ─────────────────────────────── */
+Button {
+    background: #161616;
+    border: solid #333333;
+    color: #888888;
+    min-width: 8;
+}
+
+Button:hover {
+    background: #222222;
+    color: #ffffff;
+    border: solid #555555;
+}
+
+Button.-active {
+    background: #222222;
+}
+
+/* ── Radio-style toggle buttons ────────────────────── */
+.radio-btn {
+    background: #0f0f0f;
+    border: solid #333333;
+    color: #555555;
+    min-width: 12;
+    height: 1;
+}
+
+.radio-btn.selected {
+    background: #091409;
+    border: solid #44ff88;
+    color: #44ff88;
+}
+
+/* ── Metric rows (peer / macro) ────────────────────── */
+.metric-row {
+    height: 2;
+    layout: horizontal;
+    border-bottom: solid #181818;
+    padding: 0 1;
+    align: left middle;
+}
+
+.metric-label {
+    color: #888888;
+    width: 20;
+}
+
+.metric-value {
+    color: #ffffff;
+    width: 12;
+}
+
+.metric-bar {
+    color: #44ff88;
+    width: 1fr;
+}
+
+/* ── Placeholder / muted text ──────────────────────── */
+.placeholder {
+    color: #444444;
+    content-align: center middle;
+}
+
+/* ── Claude panel ──────────────────────────────────── */
+#claude-output {
+    background: #0f0f0f;
+    color: #888888;
+    border: none;
+    padding: 1;
+    height: 1fr;
+}
+
+/* ── Financials tree ───────────────────────────────── */
+.fin-row {
+    height: 2;
+    layout: horizontal;
+    border-bottom: solid #181818;
+    padding: 0 1;
+    align: left middle;
+}
+
+.fin-label {
+    color: #4499ff;
+    width: 30;
+}
+
+.fin-label.child {
+    color: #888888;
+    padding-left: 2;
+}
+
+.fin-value {
+    color: #44ff88;
+    width: 12;
+}
+
+.fin-delta {
+    color: #555555;
+    width: 8;
+}
+
+/* ── Light mode overrides ──────────────────────────── */
+Screen.-light-mode {
+    background: #f5f5f5;
+    color: #0a0a0a;
+}
+
+Screen.-light-mode #topbar,
+Screen.-light-mode #sidebar {
+    background: #ffffff;
+}
+
+Screen.-light-mode #topbar {
+    border-bottom: solid #e0e0e0;
+}
+
+Screen.-light-mode #sidebar {
+    border-right: solid #e0e0e0;
+}
+
+Screen.-light-mode .panel {
+    background: #ffffff;
+    border: solid #e0e0e0;
+}
+
+Screen.-light-mode .panel-header {
+    background: #f0f0f0;
+    border-bottom: solid #d8d8d8;
+}
+
+Screen.-light-mode .panel-type-label {
+    color: #aaaaaa;
+}
+
+Screen.-light-mode .panel-title {
+    color: #0a0a0a;
+}
+
+Screen.-light-mode DataTable {
+    background: #ffffff;
+}
+
+Screen.-light-mode DataTable > .datatable--header {
+    background: #f0f0f0;
+    color: #555555;
+}
+
+Screen.-light-mode Input {
+    background: #f0f0f0;
+    border: tall #cccccc;
+    color: #0a0a0a;
+}
+
+Screen.-light-mode .sidebar-btn {
+    background: #ffffff;
+    color: #aaaaaa;
+}
+
+Screen.-light-mode .sidebar-btn.active {
+    background: #f0f0f0;
+    color: #0a0a0a;
+    border-left: tall #0a0a0a;
+}
+
+Screen.-light-mode #load-btn {
+    background: #000000;
+    color: #ffffff;
+}
+
+Screen.-light-mode .metric-label {
+    color: #555555;
+}
+
+Screen.-light-mode .metric-value {
+    color: #0a0a0a;
+}
+
+Screen.-light-mode #claude-output {
+    background: #ffffff;
+    color: #555555;
+}
+
+Screen.-light-mode .orca-score-block {
+    background: #ffffff;
+    border: solid #e0e0e0;
+    color: #555555;
+}
+
+Screen.-light-mode .placeholder {
+    color: #aaaaaa;
+}

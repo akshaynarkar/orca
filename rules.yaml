@@ -1,0 +1,811 @@
+# PROJECT ORCA — Global Scan Rules
+# Version 1.0 · April 2026
+# Edit this file to add, modify, or disable rules.
+# Changes take effect on next scan — no restart needed.
+
+# ─────────────────────────────────────────────
+# CATEGORY 1 — INSIDER ACTIVITY (INS)
+# Source: SEC Form 4 via edgartools
+# Only open-market transactions count.
+# ─────────────────────────────────────────────
+
+- id: INS-01
+  name: "Insider cluster buy"
+  category: insider
+  color: GREEN
+  base_strength: 90
+  rarity: 100
+  condition: "form4.open_market_buys_30d >= 2"
+  description: "2+ insiders making open-market purchases within 30 days"
+  enabled: true
+  validity_period: 30
+  sic_overrides: {}
+
+- id: INS-02
+  name: "Large insider buy"
+  category: insider
+  color: GREEN
+  base_strength: 85
+  rarity: 95
+  condition: "form4.largest_buy_usd >= 1000000"
+  description: "Single insider makes open-market purchase >= $1M"
+  enabled: true
+  validity_period: 30
+  sic_overrides: {}
+
+- id: INS-03
+  name: "CEO or CFO buys"
+  category: insider
+  color: GREEN
+  base_strength: 90
+  rarity: 98
+  condition: "form4.ceo_bought or form4.cfo_bought"
+  description: "CEO or CFO makes any open-market purchase"
+  enabled: true
+  validity_period: 30
+  sic_overrides: {}
+
+- id: INS-04
+  name: "Insider cluster sell"
+  category: insider
+  color: RED
+  base_strength: 80
+  rarity: 90
+  condition: "form4.cluster_sell_14d == True and not form4.sell_is_scheduled"
+  description: "3+ insiders selling open-market within 14 days (excludes pre-planned 10b5-1 scheduled sales)"
+  enabled: true
+  validity_period: 14
+  sic_overrides: {}
+
+- id: INS-05
+  name: "Insider buy near 52-week low"
+  category: insider
+  color: GREEN
+  base_strength: 88
+  rarity: 95
+  condition: "form4.near_52wk_low and form4.open_market_buys_30d >= 1"
+  description: "Insider buys while stock is within 10% of 52-week low"
+  enabled: true
+  validity_period: 30
+  sic_overrides: {}
+
+- id: INS-06
+  name: "Large position liquidation"
+  category: insider
+  color: RED
+  base_strength: 70
+  rarity: 75
+  condition: "form4.pct_holdings_sold > 0.30"
+  description: "Insider sells >30% of their total position"
+  enabled: true
+  validity_period: 14
+  sic_overrides: {}
+
+- id: INS-07
+  name: "No insider activity 12 months"
+  category: insider
+  color: BLUE
+  base_strength: 20
+  rarity: 25
+  condition: "form4.days_since_last_buy > 365"
+  description: "No open-market insider buying in over 12 months"
+  enabled: true
+  validity_period: 90
+  sic_overrides: {}
+
+- id: INS-08
+  name: "Post-blackout conviction buy"
+  category: insider
+  color: GREEN
+  base_strength: 88
+  rarity: 97
+  condition: "form4.days_since_earnings <= 10 and form4.ceo_bought and form4.largest_buy_usd >= 500000"
+  description: "CEO buys >=500k within 10 days of earnings release — insider has seen full internal data and still bought"
+  enabled: true
+  validity_period: 30
+  sic_overrides: {}
+
+- id: INS-09
+  name: "10b5-1 buy plan adoption"
+  category: insider
+  color: GREEN
+  base_strength: 75
+  rarity: 90
+  condition: "filing.new_10b51_plan_type == 'PURCHASE'"
+  description: "CEO/CFO adopts a new 10b5-1 plan to systematically purchase shares — legal commitment to be a buyer"
+  enabled: true
+  validity_period: 90
+  sic_overrides: {}
+
+# ─────────────────────────────────────────────
+# CATEGORY 2 — SEC FILING SIGNALS (FIL)
+# Source: EDGAR 8-K, 10-K, 10-Q, 13F via edgartools
+# ─────────────────────────────────────────────
+
+- id: FIL-01
+  name: "RPO acceleration"
+  category: filing
+  color: GREEN
+  base_strength: 85
+  rarity: 95
+  condition: "filing.rpo_yoy > 0.50 and filing.crpo_yoy > 0.20"
+  description: "Total RPO growing >50% YoY AND current RPO (next 12m) growing >20% YoY — confirms near-term engine isn't stalling"
+  enabled: true
+  validity_period: 90
+  sic_overrides: {}
+
+- id: FIL-02
+  name: "Unscheduled CEO/CFO departure"
+  category: filing
+  color: RED
+  base_strength: 92
+  rarity: 99
+  condition: "filing.ceo_departed or filing.cfo_departed"
+  description: "Unscheduled departure of CEO or CFO filed in 8-K"
+  enabled: true
+  validity_period: 90
+  sic_overrides: {}
+
+- id: FIL-03
+  name: "Material contract or partnership"
+  category: filing
+  color: GREEN
+  base_strength: 65
+  rarity: 70
+  condition: "filing.material_contract == True"
+  description: "Material contract or strategic partnership disclosed in 8-K"
+  enabled: true
+  validity_period: 90
+  sic_overrides: {}
+
+- id: FIL-04
+  name: "Revenue guidance raised"
+  category: filing
+  color: GREEN
+  base_strength: 75
+  rarity: 80
+  condition: "filing.guidance_raised == True"
+  description: "Company raises forward revenue guidance"
+  enabled: true
+  validity_period: 90
+  sic_overrides: {}
+
+- id: FIL-05
+  name: "Revenue guidance lowered"
+  category: filing
+  color: RED
+  base_strength: 78
+  rarity: 82
+  condition: "filing.guidance_lowered == True"
+  description: "Company lowers forward revenue guidance"
+  enabled: true
+  validity_period: 90
+  sic_overrides: {}
+
+- id: FIL-06
+  name: "Going concern language"
+  category: filing
+  color: RED
+  base_strength: 95
+  rarity: 99
+  condition: "filing.going_concern == True"
+  description: "Auditor includes going concern language in 10-K or 10-Q"
+  enabled: true
+  validity_period: 90
+  sic_overrides: {}
+
+- id: FIL-07
+  name: "Auditor change"
+  category: filing
+  color: RED
+  base_strength: 88
+  rarity: 97
+  condition: "filing.auditor_changed == True"
+  description: "Auditor change filed (Item 4.02 in 8-K)"
+  enabled: true
+  validity_period: 90
+  sic_overrides: {}
+
+- id: FIL-08
+  name: "Share buyback authorization"
+  category: filing
+  color: GREEN
+  base_strength: 80
+  rarity: 90
+  condition: "filing.buyback_pct_float > 0.05"
+  description: "Share buyback authorized >5% of shares outstanding"
+  enabled: true
+  validity_period: 90
+  sic_overrides: {}
+
+- id: FIL-09
+  name: "Tier-1 fund new 13F position"
+  category: filing
+  color: GREEN
+  base_strength: 78
+  rarity: 88
+  condition: "filing.new_13f_tier1 == True and price.current < filing.tier1_avg_cost * 0.95"
+  description: "Tier-1 fund opened position last quarter AND stock is now >5% cheaper than their estimated cost basis — better entry than smart money"
+  enabled: true
+  validity_period: 90
+  sic_overrides: {}
+
+- id: FIL-10
+  name: "Activist 13D filed"
+  category: filing
+  color: BLUE
+  base_strength: 50
+  rarity: 80
+  condition: "filing.activist_13d == True"
+  description: "Activist investor files 13D (>5% position with intent to influence)"
+  enabled: true
+  validity_period: 90
+  sic_overrides: {}
+
+- id: FIL-11
+  name: "Short-seller report"
+  category: filing
+  color: RED
+  base_strength: 85
+  rarity: 95
+  condition: "filing.short_seller_report == True"
+  description: "Prominent short-seller publishes research report targeting this stock"
+  enabled: true
+  validity_period: 30
+  sic_overrides: {}
+
+- id: FIL-12
+  name: "Equity dilution >10%"
+  category: filing
+  color: RED
+  base_strength: 82
+  rarity: 88
+  condition: "filing.equity_dilution_pct > 0.10"
+  description: "New equity issuance >10% of shares outstanding"
+  enabled: true
+  validity_period: 90
+  sic_overrides:
+    "2830-2836": "skip"
+
+- id: FIL-13
+  name: "Shelf registration filed"
+  category: filing
+  color: AMBER
+  base_strength: 60
+  rarity: 75
+  condition: "filing.shelf_registration == True"
+  description: "S-3 shelf registration filed — gun is loaded for a future dilutive offering, timing unknown"
+  enabled: true
+  validity_period: 90
+  sic_overrides:
+    "2830-2836": "skip"
+
+- id: FIL-14
+  name: "Poison shelf — forced dilution imminent"
+  category: filing
+  color: RED
+  base_strength: 88
+  rarity: 92
+  condition: "filing.shelf_registration == True and financials.cash_runway_months < 6"
+  description: "S-3 shelf filed with <6 months cash runway — company is forced to sell shares soon, will sell every rip"
+  enabled: true
+  validity_period: 90
+  sic_overrides:
+    "2830-2836": "skip"
+
+# ─────────────────────────────────────────────
+# CATEGORY 3 — FUNDAMENTAL / FINANCIAL (FUN)
+# Source: XBRL financials via edgartools + yfinance
+# All peer-relative conditions use top-10 SIC peers by market cap
+# ─────────────────────────────────────────────
+
+- id: FUN-01
+  name: "Sustained revenue growth"
+  category: fundamental
+  color: GREEN
+  base_strength: 80
+  rarity: 75
+  condition: "financials.revenue_growth_streak >= 3 and financials.revenue_growth > 0.20"
+  description: "Revenue growing >20% YoY for 3+ consecutive quarters"
+  enabled: true
+  validity_period: 90
+  sic_overrides: {}
+
+- id: FUN-02
+  name: "Gross margin expanding + above sector"
+  category: fundamental
+  color: GREEN
+  base_strength: 75
+  rarity: 70
+  condition: "peer.gross_margin_percentile > 60 and financials.gross_margin_delta > 0"
+  description: "Gross margin above sector P60 AND expanding YoY"
+  enabled: true
+  validity_period: 90
+  sic_overrides: {}
+
+- id: FUN-03
+  name: "Strong FCF yield vs sector"
+  category: fundamental
+  color: GREEN
+  base_strength: 72
+  rarity: 68
+  condition: "peer.fcf_yield_percentile > 60"
+  description: "Free cash flow yield above sector P60"
+  enabled: true
+  validity_period: 90
+  sic_overrides: {}
+
+- id: FUN-04
+  name: "Positive operating leverage"
+  category: fundamental
+  color: GREEN
+  base_strength: 78
+  rarity: 72
+  condition: "financials.op_leverage > 2.0"
+  description: "Revenue growing significantly faster than operating expenses (>2pp improvement)"
+  enabled: true
+  validity_period: 90
+  sic_overrides: {}
+
+- id: FUN-05
+  name: "EPS beat streak"
+  category: fundamental
+  color: GREEN
+  base_strength: 70
+  rarity: 65
+  condition: "financials.eps_beat_streak >= 3"
+  description: "EPS beat consensus estimates 3+ consecutive quarters"
+  enabled: true
+  validity_period: 90
+  sic_overrides: {}
+
+- id: FUN-06
+  name: "High leverage vs sector"
+  category: fundamental
+  color: RED
+  base_strength: 85
+  rarity: 80
+  condition: "peer.debt_ebitda_percentile < 25"
+  description: "Debt/EBITDA in bottom quartile vs sector peers"
+  enabled: true
+  validity_period: 90
+  sic_overrides:
+    "6020-6099": "skip"
+    "6500-6552": "skip"
+    "4900-4991": "skip"
+
+- id: FUN-07
+  name: "Persistent losses"
+  category: fundamental
+  color: RED
+  base_strength: 82
+  rarity: 78
+  condition: "financials.net_income_streak_neg >= 3"
+  description: "Net income negative 3+ consecutive quarters"
+  enabled: true
+  validity_period: 90
+  sic_overrides:
+    "2830-2836": "skip"
+    "7372-7379":
+      condition: "financials.net_income_streak_neg >= 6"
+
+- id: FUN-08
+  name: "Critical cash runway"
+  category: fundamental
+  color: RED
+  base_strength: 90
+  rarity: 92
+  condition: "financials.cash_runway_months < 12"
+  description: "Cash burn implies <12 months of remaining runway"
+  enabled: true
+  validity_period: 90
+  sic_overrides: {}
+
+- id: FUN-09
+  name: "Gross margin compression"
+  category: fundamental
+  color: RED
+  base_strength: 78
+  rarity: 72
+  condition: "financials.gross_margin_delta < -0.02"
+  description: "Gross margin contracting >200bps YoY"
+  enabled: true
+  validity_period: 90
+  sic_overrides: {}
+
+- id: FUN-10
+  name: "Revenue growth decelerating"
+  category: fundamental
+  color: AMBER
+  base_strength: 45
+  rarity: 40
+  condition: "financials.rev_growth_delta < -0.03"
+  description: "Revenue growth decelerating >3pp from prior quarter"
+  enabled: true
+  validity_period: 90
+  sic_overrides: {}
+
+- id: FUN-11
+  name: "Cheap relative to sector"
+  category: fundamental
+  color: GREEN
+  base_strength: 65
+  rarity: 55
+  condition: "peer.pe_percentile < 35"
+  description: "P/E ratio below sector P35 — cheap relative to peers"
+  enabled: true
+  validity_period: 90
+  sic_overrides:
+    "6020-6099":
+      condition: "peer.pb_percentile < 35"
+    "6500-6552":
+      condition: "peer.p_ffo_percentile < 35"
+    "1311":
+      condition: "peer.ev_ebitda_percentile < 35"
+
+- id: FUN-12
+  name: "Expensive + decelerating"
+  category: fundamental
+  color: RED
+  base_strength: 70
+  rarity: 65
+  condition: "peer.pe_percentile > 80 and financials.rev_growth_delta < 0"
+  description: "P/E above sector P80 while revenue growth is decelerating"
+  enabled: true
+  validity_period: 90
+  sic_overrides:
+    "6020-6099":
+      condition: "peer.pb_percentile > 80 and financials.rev_growth_delta < 0"
+
+# ─────────────────────────────────────────────
+# CATEGORY 4 — PRICE & TECHNICAL (PRC)
+# Source: yfinance OHLCV data
+# ─────────────────────────────────────────────
+
+- id: PRC-01
+  name: "Deep drawdown, intact fundamentals"
+  category: price
+  color: GREEN
+  base_strength: 75
+  rarity: 70
+  condition: "price.pct_from_ath < -0.30 and financials.revenue_growth > 0"
+  description: "Stock down >30% from all-time high while revenue still growing"
+  enabled: true
+  validity_period: 7
+  sic_overrides: {}
+
+- id: PRC-02
+  name: "Near 52-week low"
+  category: price
+  color: BLUE
+  base_strength: 40
+  rarity: 45
+  condition: "price.pct_from_52wk_low < 0.05"
+  description: "Stock within 5% of 52-week low"
+  enabled: true
+  validity_period: 7
+  sic_overrides: {}
+
+- id: PRC-03
+  name: "Short squeeze setup"
+  category: price
+  color: AMBER
+  base_strength: 50
+  rarity: 55
+  condition: "price.short_float > 0.15 and price.change_30d > 0.10"
+  description: "Short float >15% with price already rising >10% in 30 days"
+  enabled: true
+  validity_period: 7
+  sic_overrides: {}
+
+- id: PRC-04
+  name: "Volume spike"
+  category: price
+  color: AMBER
+  base_strength: 45
+  rarity: 50
+  condition: "price.volume_ratio_30d > 3.0"
+  description: "Today's volume >3x the 30-day average"
+  enabled: true
+  validity_period: 3
+  sic_overrides: {}
+
+- id: PRC-05
+  name: "New 52-week high"
+  category: price
+  color: GREEN
+  base_strength: 65
+  rarity: 50
+  condition: "price.pct_from_52wk_high > -0.01"
+  description: "Stock making new 52-week high"
+  enabled: true
+  validity_period: 7
+  sic_overrides: {}
+
+- id: PRC-06
+  name: "Momentum breakdown"
+  category: price
+  color: RED
+  base_strength: 70
+  rarity: 60
+  condition: "price.change_30d < -0.20"
+  description: "Stock down >20% in 30 days"
+  enabled: true
+  validity_period: 7
+  sic_overrides: {}
+
+- id: PRC-07
+  name: "Reclaim of 200-day MA"
+  category: price
+  color: GREEN
+  base_strength: 72
+  rarity: 65
+  condition: "price.above_200d_ma == True and price.change_30d > 0"
+  description: "Price reclaims 200-day moving average after being below it"
+  enabled: true
+  validity_period: 7
+  sic_overrides: {}
+
+- id: PRC-08
+  name: "Death cross"
+  category: price
+  color: RED
+  base_strength: 75
+  rarity: 68
+  condition: "price.death_cross == True"
+  description: "50-day MA crosses below 200-day MA"
+  enabled: true
+  validity_period: 7
+  sic_overrides: {}
+
+- id: PRC-09
+  name: "Golden cross"
+  category: price
+  color: GREEN
+  base_strength: 72
+  rarity: 65
+  condition: "price.golden_cross == True and price.pct_from_52wk_high < -0.05"
+  description: "50-day MA crosses above 200-day MA, with price not yet extended (>5% below 52wk high) — filters overbought golden crosses"
+  enabled: true
+  validity_period: 7
+  sic_overrides: {}
+
+# ─────────────────────────────────────────────
+# CATEGORY 5 — MACRO SIGNALS (MAC)
+# Source: FRED API (requires api_key in config.yaml)
+# Ticker-independent — reflects macro environment
+# ─────────────────────────────────────────────
+
+- id: MAC-01
+  name: "Yield curve inverted"
+  category: macro
+  color: RED
+  base_strength: 70
+  rarity: 90
+  condition: "macro.spread_10y_2y < 0"
+  description: "10Y-2Y Treasury yield spread is negative"
+  enabled: true
+  validity_period: 14
+  sic_overrides: {}
+
+- id: MAC-02
+  name: "Yield curve normalizing"
+  category: macro
+  color: BLUE
+  base_strength: 50
+  rarity: 80
+  condition: "macro.spread_10y_2y > 0 and macro.spread_10y_2y < 0.50"
+  description: "Yield curve dis-inverting (was negative, now 0-50bps)"
+  enabled: true
+  validity_period: 14
+  sic_overrides: {}
+
+- id: MAC-03
+  name: "VIX fear spike"
+  category: macro
+  color: GREEN
+  base_strength: 75
+  rarity: 85
+  condition: "macro.vix > 30"
+  description: "VIX above 30 — extreme fear / potential buying opportunity"
+  enabled: true
+  validity_period: 7
+  sic_overrides: {}
+
+- id: MAC-04
+  name: "VIX complacency"
+  category: macro
+  color: BLUE
+  base_strength: 55
+  rarity: 60
+  condition: "macro.vix < 15"
+  description: "VIX below 15 — low fear, elevated complacency"
+  enabled: true
+  validity_period: 7
+  sic_overrides: {}
+
+- id: MAC-05
+  name: "Fed rate cut cycle"
+  category: macro
+  color: GREEN
+  base_strength: 80
+  rarity: 88
+  condition: "macro.fed_cutting == True"
+  description: "Federal Reserve has entered a rate cutting cycle"
+  enabled: true
+  validity_period: 14
+  sic_overrides: {}
+
+- id: MAC-06
+  name: "Fed rate hike cycle"
+  category: macro
+  color: RED
+  base_strength: 75
+  rarity: 82
+  condition: "macro.fed_hiking == True"
+  description: "Federal Reserve is actively raising rates"
+  enabled: true
+  validity_period: 14
+  sic_overrides: {}
+
+- id: MAC-07
+  name: "CPI surprise"
+  category: macro
+  color: RED
+  base_strength: 72
+  rarity: 80
+  condition: "macro.cpi_surprise > 0.003"
+  description: "CPI came in >0.3pp above consensus estimate"
+  enabled: true
+  validity_period: 14
+  sic_overrides: {}
+
+- id: MAC-08
+  name: "Strong dollar headwind"
+  category: macro
+  color: RED
+  base_strength: 65
+  rarity: 70
+  condition: "macro.dxy_change_30d > 0.05"
+  description: "US Dollar index (DXY) rising >5% in 30 days"
+  enabled: true
+  validity_period: 14
+  sic_overrides: {}
+
+- id: MAC-09
+  name: "Credit spreads widening"
+  category: macro
+  color: RED
+  base_strength: 78
+  rarity: 82
+  condition: "macro.hy_spread_change_30d > 50"
+  description: "High-yield credit spreads widening >50bps in 30 days"
+  enabled: true
+  validity_period: 14
+  sic_overrides: {}
+
+- id: MAC-10
+  name: "Credit spreads tightening"
+  category: macro
+  color: GREEN
+  base_strength: 75
+  rarity: 80
+  condition: "macro.hy_spread_change_30d < -50"
+  description: "High-yield credit spreads tightening >50bps in 30 days"
+  enabled: true
+  validity_period: 14
+  sic_overrides: {}
+
+# ─────────────────────────────────────────────
+# CATEGORY 6 — CONFLUENCE RULES (CMP)
+# Fire only when multiple base rules align simultaneously.
+# Carry 2x ORCA Score weight.
+# ─────────────────────────────────────────────
+
+- id: CMP-01
+  name: "Strong long setup"
+  category: composite
+  color: GREEN
+  base_strength: 95
+  rarity: 99
+  condition: "fired('INS-01') and fired('PRC-01') and fired('FUN-01')"
+  description: "Insider cluster buy + deep drawdown + sustained revenue growth"
+  enabled: true
+  validity_period: 30
+  sic_overrides: {}
+
+- id: CMP-02
+  name: "Distress signal"
+  category: composite
+  color: RED
+  base_strength: 96
+  rarity: 99
+  condition: "fired('FIL-06') and fired('FUN-08') and fired('INS-04')"
+  description: "Going concern + critical cash runway + insider cluster sell"
+  enabled: true
+  validity_period: 90
+  sic_overrides: {}
+
+- id: CMP-03
+  name: "Crisis buy window"
+  category: composite
+  color: GREEN
+  base_strength: 93
+  rarity: 99
+  condition: "fired('MAC-03') and fired('PRC-02') and fired('INS-02')"
+  description: "VIX >30 + stock near 52-week low + large insider buy"
+  enabled: true
+  validity_period: 30
+  sic_overrides: {}
+
+- id: CMP-04
+  name: "Clean bull setup"
+  category: composite
+  color: GREEN
+  base_strength: 88
+  rarity: 97
+  condition: "green_count >= 4 and red_count == 0"
+  description: "4+ GREEN signals firing with zero RED signals"
+  enabled: true
+  validity_period: 7
+  sic_overrides: {}
+
+- id: CMP-05
+  name: "Distribution top"
+  category: composite
+  color: RED
+  base_strength: 90
+  rarity: 98
+  condition: "fired('INS-04') and fired('PRC-06') and fired('FUN-10')"
+  description: "Insider cluster sell + price momentum breakdown + revenue deceleration"
+  enabled: true
+  validity_period: 30
+  sic_overrides: {}
+
+- id: CMP-06
+  name: "Value trap warning"
+  category: composite
+  color: RED
+  base_strength: 88
+  rarity: 97
+  condition: "fired('FUN-07') and fired('FUN-09') and fired('PRC-06')"
+  description: "Persistent losses + gross margin compression + price breakdown"
+  enabled: true
+  validity_period: 90
+  sic_overrides: {}
+
+- id: CMP-07
+  name: "Breakout confirmation"
+  category: composite
+  color: GREEN
+  base_strength: 85
+  rarity: 95
+  condition: "fired('PRC-05') and fired('PRC-09') and fired('FUN-01')"
+  description: "New 52-week high + golden cross + sustained revenue growth"
+  enabled: true
+  validity_period: 7
+  sic_overrides: {}
+
+- id: CMP-08
+  name: "Insider conviction low"
+  category: composite
+  color: GREEN
+  base_strength: 90
+  rarity: 98
+  condition: "fired('INS-05') and fired('PRC-01') and fired('MAC-03')"
+  description: "Insider buy near 52-week low + deep drawdown + VIX spike"
+  enabled: true
+  validity_period: 30
+  sic_overrides: {}
+
+- id: CMP-09
+  name: "Coiled spring"
+  category: composite
+  color: GREEN
+  base_strength: 93
+  rarity: 99
+  condition: "fired('INS-08') and fired('FIL-09') and fired('FUN-04')"
+  description: "Post-blackout conviction buy + better entry than Tier-1 fund + positive operating leverage — insider, billionaire, and margin expansion aligned"
+  enabled: true
+  validity_period: 30
+  sic_overrides: {}

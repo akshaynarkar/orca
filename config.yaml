@@ -1,0 +1,27 @@
+identity:
+  name: "Your Name"
+  email: "contact@edgarian.com"
+
+fred:
+  api_key: "10ba3f76ac9a7a767dabed6055de8374"
+
+claude:
+  mode: cli                    # "cli" or "api"
+  api_key: ""                  # only if mode: api
+  model: sonnet                # sonnet | haiku | opus
+  cache_days: 1                # reuse cached analysis for N days
+
+peers:
+  max_peers: 10                # top N peers by market cap
+  exchanges: ["NYSE", "Nasdaq"]
+  cache_days: 1
+
+ui:
+  default_ticker: "MSFT"
+  font_size: 13
+  theme: dark                  # dark | light
+
+export:
+  output_dir: "./reports"
+  pdf_font: Courier
+  include_raw_data: true
