@@ -20,7 +20,7 @@ from textual.reactive import reactive
 from textual.widgets import Button, Input, Label, Static
 
 from ui.panels import (
-    ClaudePanel,
+    #ClaudePanel,
     EightKPanel,
     FinancialsPanel,
     Form4Panel,
@@ -40,7 +40,7 @@ PANELS: list[tuple[str, str, type, str]] = [
     ("btn-fin", "FIN", FinancialsPanel, "panel-fin"),
     ("btn-per", "PER", PeerPanel,       "panel-per"),
     ("btn-mac", "MAC", MacroPanel,      "panel-mac"),
-    ("btn-ana", "ANA", ClaudePanel,     "panel-ana"),
+    #("btn-ana", "ANA", ClaudePanel,     "panel-ana"),
     ("btn-rul", "RUL", RulesPanel,      "panel-rul"),
 ]
 
@@ -72,10 +72,6 @@ class OrcaApp(App):
     # Track which panel is in each slot
     _left_panel_id:  str = DEFAULT_LEFT
     _right_panel_id: str = DEFAULT_RIGHT
-
-    def __init__(self, initial_ticker: str = "MSFT", **kwargs):
-        super().__init__(**kwargs)
-        self._initial_ticker = initial_ticker.upper()
 
     # ── Layout ──────────────────────────────────────────────────────────────
 
@@ -226,14 +222,17 @@ class OrcaApp(App):
 
     # ── Ticker loading ───────────────────────────────────────────────────────
 
+    def __init__(self, initial_ticker: str = "MSFT", **kwargs):
+        super().__init__(**kwargs)
+        self._initial_ticker = initial_ticker.upper()
+        self._load_gen: int = 0  # generation counter to discard stale fetches
+
     def _load_ticker(self, ticker: str) -> None:
-        """
-        Phase 4: update ticker display.
-        Phase 5: spawns background thread to fetch all data.
-        """
+        """Phase 5: update headers and spawn background fetch."""
         self.ticker = ticker
-        self._update_status_bar(f"Loading {ticker}…")
-        # Update all panel headers
+        self._load_gen += 1
+        gen = self._load_gen
+        self._update_status_bar(f"Loading {ticker}… (peer data may take up to 60s first run)")
         for _, _, _, panel_id in PANELS:
             try:
                 panel = self.query_one(f"#{panel_id}")
@@ -241,7 +240,198 @@ class OrcaApp(App):
                     panel.set_ticker(ticker)
             except NoMatches:
                 pass
-        self._update_status_bar(f"ORCA · {ticker} · ready  (Phase 5: data not yet wired)")
+        self._fetch_and_populate(ticker, gen)
+
+    @work(thread=True)
+    def _fetch_and_populate(self, ticker: str, gen: int) -> None:
+        """Background worker: fetch all data in parallel then push to UI thread."""
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        from fetchers.edgar_fetcher import fetch_form4, fetch_8k, fetch_financials, fetch_company_info
+        from fetchers.price_fetcher import fetch_ohlcv, fetch_info, fetch_technical, fetch_volume_ratio
+        from fetchers.macro_fetcher import (
+            fetch_yield_curve, fetch_vix, fetch_cpi,
+            fetch_dxy, fetch_fed_rate, fetch_credit_spreads,
+        )
+
+        jobs = {
+            "form4":      lambda: fetch_form4(ticker),
+            "eightk":     lambda: fetch_8k(ticker),
+            "financials":  lambda: fetch_financials(ticker),
+            "company":    lambda: fetch_company_info(ticker),
+            "ohlcv":      lambda: fetch_ohlcv(ticker, period="3mo"),
+            "price_info": lambda: fetch_info(ticker),
+            "technical":  lambda: fetch_technical(ticker),
+            "volume":     lambda: fetch_volume_ratio(ticker),
+            "yield_curve":lambda: fetch_yield_curve(),
+            "vix":        lambda: fetch_vix(),
+            "cpi":        lambda: fetch_cpi(),
+            "dxy":        lambda: fetch_dxy(),
+            "fed":        lambda: fetch_fed_rate(),
+            "credit":     lambda: fetch_credit_spreads(),
+        }
+
+        results: dict = {}
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            futures = {pool.submit(fn): key for key, fn in jobs.items()}
+            for future in as_completed(futures):
+                key = futures[future]
+                try:
+                    results[key] = future.result()
+                except Exception as exc:
+                    import logging
+                    logging.getLogger("orca").error("fetch %s failed: %s", key, exc)
+                    results[key] = {} if key != "vix" else 0.0
+
+        # Signal engine — runs on worker thread after all data arrives
+        report = None
+        fired = []
+        try:
+            from engine.rule_loader import RuleLoader
+            from engine.rule_evaluator import build_namespace, evaluate_all
+            from engine.peer_engine import get_peer_context
+            from engine.score_calculator import compute_orca_score, compute_confidence
+            from engine.signal_report import build_report
+            from engine.sic_classifier import get_sic_description
+
+            company_info = results.get("company") or {}
+            sic = int(company_info.get("sic", 0))
+            company_name = company_info.get("name", ticker)
+            sector = company_info.get("industry", get_sic_description(sic))
+
+            price_info = results.get("price_info") or {}
+            financials = results.get("financials") or {}
+            ohlcv = results.get("ohlcv")
+            technical = results.get("technical") or {}
+            volume_ratio = results.get("volume") or 0.0
+
+            # Build peer context (slow on first run — uses SIC)
+            subject_metrics = {
+                "rev_growth":   price_info.get("rev_growth", 0.0),
+                "gross_margin": price_info.get("gross_margin", 0.0),
+                "fcf_yield":    0.0,
+                "debt_ebitda":  0.0,
+                "pe":           price_info.get("pe_ratio", 0.0),
+                "op_leverage":  0.0,
+                "ev_ebitda":    0.0,
+                "pb":           0.0,
+                "p_ffo":        0.0,
+            }
+            peer_ctx = get_peer_context(ticker, sic, subject_metrics) if sic else None
+
+            rules = RuleLoader("rules.yaml").load()
+
+            namespace = build_namespace(
+                ticker=ticker,
+                form4_data=results.get("form4") or [],
+                eightk_data=results.get("eightk") or [],
+                financials_data=financials,
+                peer_context=peer_ctx,
+                price_info=price_info,
+                technicals=technical,
+                volume_ratio=volume_ratio,
+                ohlcv=ohlcv,
+                yield_curve=results.get("yield_curve") or {},
+                vix=results.get("vix") or 0.0,
+                cpi=results.get("cpi") or {},
+                dxy=results.get("dxy") or {},
+                fed=results.get("fed") or {},
+                spreads=results.get("credit") or {},
+            )
+
+            fired = evaluate_all(rules, namespace, sic)
+
+            report = build_report(
+                ticker=ticker,
+                company_name=company_name,
+                fired_signals=fired,
+                peer_context=peer_ctx,
+                price_data=price_info,
+                macro_data={
+                    "yield_curve": results.get("yield_curve") or {},
+                    "vix":         results.get("vix") or 0.0,
+                    "cpi":         results.get("cpi") or {},
+                    "dxy":         results.get("dxy") or {},
+                    "fed":         results.get("fed") or {},
+                    "credit":      results.get("credit") or {},
+                },
+                financials_data=financials,
+                sic=sic,
+                sector=sector,
+            )
+        except Exception as exc:
+            import logging
+            logging.getLogger("orca").error("signal engine failed: %s", exc)
+
+        # Push to UI — must use call_from_thread
+        self.app.call_from_thread(self._populate, ticker, results, report, gen)
+
+    def _populate(self, ticker: str, results: dict, report, gen: int) -> None:
+        """Called on UI thread after all fetches complete. Discards stale loads."""
+        if gen != self._load_gen:
+            return  # a newer ticker was requested — discard
+
+        price_info = results.get("price_info") or {}
+        macro_data = {
+            "yield_curve": results.get("yield_curve") or {},
+            "vix":         results.get("vix") or 0.0,
+            "cpi":         results.get("cpi") or {},
+            "dxy":         results.get("dxy") or {},
+            "fed":         results.get("fed") or {},
+            "credit":      results.get("credit") or {},
+        }
+
+        try:
+            self.query_one("#panel-sig", SignalsPanel).load(report)
+        except (NoMatches, Exception):
+            pass
+        try:
+            self.query_one("#panel-frm", Form4Panel).load(results.get("form4") or [])
+        except (NoMatches, Exception):
+            pass
+        try:
+            self.query_one("#panel-8k", EightKPanel).load(results.get("eightk") or [])
+        except (NoMatches, Exception):
+            pass
+        try:
+            self.query_one("#panel-fin", FinancialsPanel).load(
+                results.get("financials") or {}, mode="annual"
+            )
+        except (NoMatches, Exception):
+            pass
+        try:
+            peer_ctx = report.peer_context if report else None
+            self.query_one("#panel-per", PeerPanel).load(peer_ctx)
+        except (NoMatches, Exception):
+            pass
+        try:
+            self.query_one("#panel-mac", MacroPanel).load(macro_data)
+        except (NoMatches, Exception):
+            pass
+        try:
+            self.query_one("#panel-ana", ClaudePanel).show_placeholder()
+        except (NoMatches, Exception):
+            pass
+
+        # PricePanel is not in PANELS sidebar but may exist if added
+        try:
+            from ui.panels.price_panel import PricePanel as _PP
+            self.query_one("#panel-prc", _PP).load(
+                ticker, df=results.get("ohlcv"), info=price_info
+            )
+        except (NoMatches, Exception):
+            pass
+
+        # Update status bar
+        n_signals = len(report.fired_signals) if report else 0
+        price = price_info.get("price", "—")
+        chg = price_info.get("change_1d", None)
+        if chg is None and price_info.get("prev_close"):
+            prev = price_info.get("prev_close", 0)
+            chg = ((price - prev) / prev) if prev and price else 0.0
+        chg_str = (f"+{chg:.1%}" if chg >= 0 else f"{chg:.1%}") if isinstance(chg, float) else "—"
+        failed = [k for k, v in results.items() if not v]
+        warn = f"  ⚠ {', '.join(failed)} unavailable" if failed else ""
+        self.sub_title = f"{ticker}  ·  ${price}  {chg_str}  ·  {n_signals} signals{warn}"
 
     def _update_status_bar(self, message: str) -> None:
         try:

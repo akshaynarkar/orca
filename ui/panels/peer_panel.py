@@ -107,5 +107,48 @@ class PeerPanel(BasePanel):
             yield Static("[ Peer data loads after fetch ]", classes="placeholder")
 
     def load(self, peer_context=None) -> None:
-        """Phase 5: receive PeerContext dataclass."""
-        pass
+        """Phase 5: receive PeerContext dataclass and render percentile bars."""
+        scroll = self.query_one("#peer-scroll", VerticalScroll)
+        subheader = self.query_one("#peer-subheader", Static)
+
+        for child in list(scroll.children):
+            child.remove()
+
+        if not peer_context or not peer_context.peer_count:
+            subheader.update("No peer data available")
+            scroll.mount(Static("[ Peer data unavailable — check SEC identity in config.yaml ]", classes="placeholder"))
+            return
+
+        peers_str = "  ·  ".join(peer_context.peer_tickers[:5])
+        if peer_context.peer_count > 5:
+            peers_str += f"  +{peer_context.peer_count - 5} more"
+        subheader.update(f"SIC {peer_context.sic}  ·  {peer_context.sector_name}  ·  {peers_str}")
+
+        p = peer_context.percentiles
+        metrics = [
+            ("Rev Growth",    p.get("rev_growth_percentile")),
+            ("Gross Margin",  p.get("gross_margin_percentile")),
+            ("FCF Yield",     p.get("fcf_yield_percentile")),
+            ("Debt/EBITDA",   p.get("debt_ebitda_percentile")),
+            ("P/E Ratio",     p.get("pe_percentile")),
+            ("Op. Leverage",  p.get("op_leverage_percentile")),
+            ("EV/EBITDA",     p.get("ev_ebitda_percentile")),
+            ("Price/Book",    p.get("pb_percentile")),
+        ]
+
+        for label, pct in metrics:
+            if pct is None:
+                continue
+            pct_int = round(pct)
+            bar_str = _bar(pct_int)
+            # Color hint in text
+            if pct_int >= 67:
+                signal = "●"   # green territory
+            elif pct_int < 34:
+                signal = "●"   # red territory
+            else:
+                signal = "·"   # neutral
+            scroll.mount(Static(
+                f" {label:<13} {pct_int:>4}   {bar_str}",
+                classes="peer-metric-row peer-metric-lbl",
+            ))

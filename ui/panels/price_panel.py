@@ -8,6 +8,12 @@ from textual.containers import Horizontal, Vertical
 
 from ui.panels.base_panel import BasePanel
 
+try:
+    from textual_plotext import PlotextPlot
+    _HAS_PLOTEXT = True
+except ImportError:
+    _HAS_PLOTEXT = False
+
 
 class PricePanel(BasePanel):
     PANEL_TYPE = "PRICE"
@@ -73,10 +79,13 @@ class PricePanel(BasePanel):
             "$—.——   —.—%   Vol —   MktCap —",
             id="price-stats",
         )
-        yield Static(
-            "[ price chart loads after data fetch ]",
-            id="chart-area",
-        )
+        if _HAS_PLOTEXT:
+            yield PlotextPlot(id="chart-area")
+        else:
+            yield Static(
+                "[ install textual-plotext for price chart ]",
+                id="chart-area",
+            )
         yield Static(
             "[ sparkline ]",
             id="sparkline-area",
@@ -114,16 +123,71 @@ class PricePanel(BasePanel):
             self._draw()
 
     def _draw(self) -> None:
-        """
-        Phase 5: render the plotext bar chart into #chart-area.
-        Stub here — Phase 5 will replace with PlotextPlot rendering.
-        Called from load() if visible, or from on_show() if was hidden at load time.
-        """
-        # Phase 5 implementation:
-        #   plot = self.query_one("#chart-area", PlotextPlot)
-        #   plt = plot.plt
-        #   plt.clear_figure()
-        #   colors = ["green" if c >= o else "red" for o, c in zip(df["Open"], df["Close"])]
-        #   plt.bar(dates, df["Close"].tolist(), color=colors)
-        #   plot.refresh()
-        pass
+        """Render the 60-day bar chart into #chart-area. Called from load() or on_show()."""
+        df = self._df
+        info = self._info or {}
+
+        # Update 52-week range bar
+        try:
+            low = info.get("52wk_low", 0)
+            high = info.get("52wk_high", 0)
+            price = info.get("price", 0)
+            if low and high:
+                self.query_one("#range-bar", Static).update(
+                    f"52wk  ${low:.2f}  {'─' * 16}  ${high:.2f}   now ${price:.2f}"
+                )
+        except Exception:
+            pass
+
+        if df is None or df.empty:
+            if not _HAS_PLOTEXT:
+                try:
+                    self.query_one("#chart-area", Static).update("[ No price data ]")
+                except Exception:
+                    pass
+            return
+
+        if not _HAS_PLOTEXT:
+            # ASCII fallback sparkline
+            closes = df["Close"].tolist()[-60:]
+            lo, hi = min(closes), max(closes)
+            rng = hi - lo or 1
+            bars = "▁▂▃▄▅▆▇█"
+            spark = "".join(bars[round((v - lo) / rng * 7)] for v in closes)
+            try:
+                self.query_one("#chart-area", Static).update(spark)
+            except Exception:
+                pass
+            return
+
+        # PlotextPlot rendering
+        try:
+            plot = self.query_one("#chart-area", PlotextPlot)
+            plt = plot.plt
+            plt.clear_figure()
+            plt.theme("dark")
+
+            tail = df.tail(60)
+            dates = list(range(len(tail)))
+            closes = tail["Close"].tolist()
+            opens = tail["Open"].tolist()
+            colors = ["green" if c >= o else "red" for o, c in zip(opens, closes)]
+
+            plt.bar(dates, closes, color=colors, width=0.8)
+            plt.xfrequency(0)
+            plt.title(f"{self.ticker}  60d")
+            plt.xlabel("")
+            plot.refresh()
+        except Exception:
+            pass
+
+        # ASCII sparkline in the sparkline widget
+        try:
+            closes = df["Close"].tolist()[-30:]
+            lo, hi = min(closes), max(closes)
+            rng = hi - lo or 1
+            bars_chars = "▁▂▃▄▅▆▇█"
+            spark = "".join(bars_chars[round((v - lo) / rng * 7)] for v in closes)
+            self.query_one("#sparkline-area", Static).update(f" 30d  {spark}")
+        except Exception:
+            pass
